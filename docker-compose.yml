@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Database service
+  database:
+    build: ./database
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - housing-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=housing_data
+      - MYSQL_USER=mluser
+      - MYSQL_PASSWORD=password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Data setup service - runs once to initialize data
+  data-setup:
+    build: ./api
+    command: python setup_data.py
+    volumes:
+      - ./api/data:/app/data
+    networks:
+      - housing-network
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+
+  # Model training service - runs once to train the model
+  model-training:
+    build: ./api
+    command: python train_model.py
+    volumes:
+      - ./api/models:/app/models
+      - model-volume:/app
+    networks:
+      - housing-network
+    depends_on:
+      - data-setup
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+
+  # API service instances (multiple containers)
+  api1:
+    build: ./api
+    volumes:
+      - model-volume:/app:ro
+    ports:
+      - "5001:5000"
+    networks:
+      - housing-network
+    depends_on:
+      - model-training
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+    deploy:
