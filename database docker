@@ -1,0 +1,15 @@
+FROM mysql:8.0
+
+ENV MYSQL_ROOT_PASSWORD=rootpassword
+ENV MYSQL_DATABASE=housing_data
+ENV MYSQL_USER=mluser
+ENV MYSQL_PASSWORD=password
+
+# Add MySQL configuration
+COPY my.cnf /etc/mysql/conf.d/
+
+# Healthcheck to ensure MySQL is ready
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
+  CMD mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD || exit 1
+
+EXPOSE 3306
