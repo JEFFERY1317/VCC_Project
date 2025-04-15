@@ -72,3 +72,112 @@ services:
       - DB_HOST=database
       - DB_NAME=housing_data
     deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+
+  api2:
+    build: ./api
+    volumes:
+      - model-volume:/app:ro
+    ports:
+      - "5002:5000"
+    networks:
+      - housing-network
+    depends_on:
+      - model-training
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+
+  api3:
+    build: ./api
+    volumes:
+      - model-volume:/app:ro
+    ports:
+      - "5003:5000"
+    networks:
+      - housing-network
+    depends_on:
+      - model-training
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+
+  api4:
+    build: ./api
+    volumes:
+      - model-volume:/app:ro
+    ports:
+      - "5004:5000"
+    networks:
+      - housing-network
+    depends_on:
+      - model-training
+    environment:
+      - DB_USER=mluser
+      - DB_PASSWORD=password
+      - DB_HOST=database
+      - DB_NAME=housing_data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+
+  # Load balancer service
+  load-balancer:
+    build: ./load-balancer
+    ports:
+      - "80:80"
+    networks:
+      - housing-network
+    depends_on:
+      - api1
+      - api2
+      - api3
+      - api4
+
+  # Monitoring service
+  monitoring:
+    build: ./monitoring
+    ports:
+      - "8080:8080"
+    networks:
+      - housing-network
+    depends_on:
+      - load-balancer
+
+  # Load testing service - runs once to test the system
+  load-testing:
+    build: ./load-testing
+    volumes:
+      - ./results:/app/results
+    networks:
+      - housing-network
+    depends_on:
+      - load-balancer
+      - monitoring
+
+networks:
+  housing-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  model-volume:
